@@ -1,0 +1,474 @@
+﻿using System.Linq;
+LINQ : Language Integrated Query :
+
+LINQ Query Syntaxes
+=> Query Syntax ( Declarative/SQL-like )
+	SYNTAX : from <item> in <tablename> where <condition> select <item>;
+	( starts with from, ends with select/group )
+=> Method Syntax ( Fluent API : Method Chaining/Lambda Based )
+	SYNTAX : <tablename>.Where(<condition>).Select(<item>=><item>);
+	( allows method chaining, allows operations like Sum(), Count(), FirstOrDefault() and Aggregate())
+
+QUERY EVALUATION : Defered vs Eager : When and how query is executed
+=> Deferred Evaluation ( Lazy Execution )
+		 : Query not executed immediately when defined
+		 : Execution happens only when query is iterated : foreach, .ToList(), .Count(), .First();
+		 : Query logic compiled but not executed until needed.
+		 : When query results might change before execution.
+
+=> Eager Evaluation ( Immediate Execution )
+		 : Query executed immediately
+		 : Results stored in memory right away
+		 : Terminal method - .ToList(), .ToArray(), .Count(), .First(), .ToDictionary()
+
+QUERY EXECUTION : Interpreted Query vs Local Query
+=> Interpreted Queries ( IQueryable<T> )
+		: Queries executed on Remote/DataBase
+		: IQueryable<T> : represents queryable datasource
+		: Query deferred and translated into sql query for execution
+		: Works with - Expression Trees : converts C# Linq query into sql query
+		: Query logic executed on database server
+		: Ensures only required data is fetched
+		: LINQ -> ExpressionTree -> SQL Query -> executed on DB Server
+
+=> Local Queries ( IEnumerable<T> )
+		: Queries executed on In-Memory/Collections
+		: Execution happens in C# runtime 
+		: implements deferred execution, but filtering happens after data loaded
+		: uses Iterator to loopm through data in memory
+		: iterates over each item in the collection and applies filtering logic.
+		: all data loaded in memory first then Linq filters it
+		: No SQL generated.
+
+EXPRESSION TREE of a LINQ query
+=> What : Represents a query as an Abstract Syntax Tree (AST)
+		: allows LINQ providers to analyze and convert queries dynamically before execution
+		: LINQ Query with IQueryable<T> allows coversion
+
+Anatomy of an Expression : Each expression node in the tree belongs to a specific Expression Type from the System.Linq.Expressions namespace.
+=> Parametr Expression
+		: named parameter used in a lambda expression
+		: forms input variable for an expression tree
+=> Member Expression
+		: Represents access to field/property of an object/class
+		: where(u=>u.Age>18)
+=> Method Call Expression
+		: Represents a method call inside an expression tree.
+		:.OrderBy(u => u.Name.ToLower())
+=> Binary Expression
+		: Represents binary operations like +, -, *, /, ==, &&, etc
+=> Unary Expression
+		: Represents an operation on a single operand, such as negation (-), type conversion ((int)x), or logical NOT (!x).
+
+# Projection Operators ---- 
+" Projection is the process of transforming data from a collection (or sequence) into a new form"
+=> SELECT - IEnumerable<TResult> Select(Func<TSource, TResult> selector); 
+		: TSource → Type of elements in the source collection. : The source is an IEnumerable<T>, meaning it's an iterable sequence
+		: TResult → Type of elements in the resulting collection.		
+		: Transforms each element individually, Returns one output per input element.
+✅ Extracting specific columns (fields or properties) from objects.
+✅ Transforming data into a different type.
+✅ Converting numerical operations (e.g., square, log, etc.).
+(1-to-1 mapping): Collection.Select(emp => emp.Name) → ["Alice", "Bob"]	
+
+=> SELECTMANY - IEnumerable<TResult> SelectMany(Func<TSource, IEnumerable<TResult>> selector);
+		: The source collection is iterated. The selector function is applied to get a nested collection 
+		: A nested loop iterates through the inner collection, extracting and returning elements one at a time.
+		: Flattens and transforms collections inside a collection.
+		: Flattens nested collections and then applies a transformation.
+		: Used when each element contains a collection, and we want to work with the inner elements directly.
+		: Returns a single flattened sequence instead of nested collections.
+		: Returns a different number of outputs per input (can be more than one per input).
+✅ Flattening nested lists, arrays, or objects containing lists.
+✅ Database queries where relationships involve one-to-many (e.g., Orders per Customer).
+(1-to-many mapping): Collection.SelectMany(emp => emp.Orders) → ["Laptop", "Phone", "Tablet"]
+
+# Restriction/Filtering Operators ----
+=> WHERE - IEnumerable<TSource> Where(Func<TSource, bool> predicate);
+		: The Where operator filters elements based on a predicate (condition).
+		: It only includes elements that match the condition. Only yield elements that satisfy the condition
+
+# Ordering/Sorting Operators ----
+=> ORDERBY ( Sort by a primary key )
+		: OrderBy sorts elements in ascending order.
+		: If sorting numbers, it sorts from smallest to largest.
+		: If sorting strings, it sorts alphabetically (A → Z).
+		: If sorting objects, it sorts based on the provided property.
+		: Internally uses QuickSort, MergeSort, or HeapSort (depending on implementation).
+		: Calls IComparer<T>.Compare() or uses default comparer (IComparable<T>).
+		: Uses lazy evaluation, meaning sorting does not happen immediately.
+✅ If sorting objects, ensure the property being sorted has a proper comparison method (e.g., IComparable).
+✅ Stable sorting: Elements with equal keys maintain their original relative order.
+
+=> THENBY
+		: ThenBy is used after OrderBy or OrderByDescending.
+		: It performs secondary sorting in ascending order.
+		: If two elements have the same primary key, ThenBy sorts by secondary key.
+		: Uses stable sorting, meaning equal elements maintain their relative order.
+		: Instead of performing another full sort, it sorts only within groups of identical primary keys.
+		: Uses linked lists or additional keys to track secondary sorting.
+
+=> ORDERBYDESCENDING 
+		: OrderByDescending sorts in reverse order.
+=> THENBYDESCENDING
+		: ThenByDescending sorts the secondary key in descending order.
+
+# Grouping Operators ----
+=> GROUPBY
+		: used to group elements in a collection based on a specific key.
+		: To create nested collections (each group becomes a collection of items).
+		: To structure hierarchical data (grouping orders by customer, employees by department, etc.).
+		: var groupedResult = collection.GroupBy(item => item.KeySelector);
+		: The result is an IEnumerable<IGrouping<TKey, TElement>>, where:
+			TKey = Grouping Key
+			TElement = Items in the group
+		: Grouping Key Cannot be Null: Ensure the key used for grouping is not null, or use .Where() to filter out null values.
+		: GroupBy uses deferred execution, meaning it doesn’t execute until iterated.
+		: By default, GroupBy does not maintain order; use .OrderBy() if needed.
+		: Supports Multiple Key Grouping: You can group by multiple keys using anonymous objects
+			var grouped = products.GroupBy(p => new { p.Category, p.Price });
+		: GroupBy alone returns IGrouping<TKey, TElement>, use .Select() to project results.
+		: Hash Table Implementation (For small data) Each key is stored as a hash.
+GroupBy -> Deferred Execution + Throws Exception if Key Missing
+ToLookup -> Immediate Execution + Returns Empty Collection if Key Missing
+
+# Join Operations ----
+Used to combine data from multiple collections or tables based on a common key.
+=> JOIN
+		: Performs an Inner Join.
+		: Used to fetch matching records from two datasets based on a common key.
+
+var result = collection1.Join(collection2,
+                keyFromCollection1 => keyFromCollection1.Property,  // Outer key
+                keyFromCollection2 => keyFromCollection2.Property,  // Inner key
+                (outerItem, innerItem) => new { outerItem, innerItem } // Result Selector
+);
+
+=> GROUPJOIN
+		: Performs a Left Join with Grouping.
+		: Used for Left Join, but instead of getting NULL for missing data, it groups the matching items.
+
+var result = collection1.GroupJoin(collection2,
+                keyFromCollection1 => keyFromCollection1.Property,  // Outer key
+                keyFromCollection2 => keyFromCollection2.Property,  // Inner key
+                (outerItem, innerItems) => new { outerItem, innerItems } // Result Selector
+);
+		: 
+
+=> DEFAULTIFEMPTY
+		: Helps in Left Outer Joins (for NULL handling).
+		: Used with GroupJoin to simulate a true LEFT JOIN by returning NULL where no match exists.
+
+Need only matching records?						: Use Inner Join (Join)
+Need all left-table records even if no match?	: Use Left Join (GroupJoin + DefaultIfEmpty)
+Need all right-table records even if no match?	: Use Right Join (Simulated Left Join)
+Need all records from both tables?				: Use Full Outer Join (Union)
+Need every possible combination?				: Use Cross Join (from...from)
+Need hierarchical relationships?				: Use Self Join (Join on itself)
+
+# Partition Operators ----
+=> TAKE 
+		: Used to retrieve the first N elements from a sequence.
+		: var result = collection.Take(n);
+
+=> TAKEWHILE
+		: Retrieves elements as long as a condition is true.
+		: var result = collection.TakeWhile(condition);
+
+=> SKIP
+		: Skips the first N elements and returns the rest.
+		: var result = collection.Skip(n);
+
+=> SKIPWHILE
+		: Skips elements while a condition is true.
+		: var result = collection.SkipWhile(condition);
+
+# Aggregator Operators ----
+=> COUNT	 : var count = collection.Count();
+=> SUM		 : var sum = collection.Sum(x => x.Property);
+=> MIN		 : var min = collection.Min();
+=> MAX		 : var max = collection.Max();
+=> AVERAGE	 : var avg = collection.Average();
+=> AGGREGATE : var result = collection.Aggregate((x, y) => x + y); : Applies a function over elements.
+
+# Set Operators ----
+=> DISTINCT  : var distinctItems = collection.Distinct();
+=> UNION	 : var result = collection1.Union(collection2);
+=> INTERSECT : var result = collection1.Intersect(collection2);
+=> EXCEPT	 : var result = collection1.Except(collection2);
+
+# Conversion Operators ----
+=> TOARRAY()		: var array = collection.ToArray();
+=> TOLIST()			: var list = collection.ToList();
+=> TODICTIONARY()	: var dict = collection.ToDictionary(x => x.Key);
+=> OFTYPE			: var integers = collection.OfType<int>(); : Filters elements by type.
+
+# Element Operators ----
+=> FIRST()			: var first = collection.First();
+=> FIRSTORDEFAULT() : var firstOrDefault = collection.FirstOrDefault();
+=> LAST()			: var last = collection.Last();
+=> LASTORDEFAULT()	: var lastOrDefault = collection.LastOrDefault();
+=> SINGLE			: var single = collection.Single(); : Ensures only one element exists, throws exception if multiple.
+=> SINGLEORDEFAULT	: var singleOrDefault = collection.SingleOrDefault();
+=> ELEMENTAT		: var item = collection.ElementAt(2);
+
+# Generate Sequences ----
+=> ENUMERABLE.RANGE  : ✔️ Generates range of numbers.
+					 : var range = Enumerable.Range(1, 5); // {1, 2, 3, 4, 5}
+=> ENUMERABLE.REPEAT : ✔️ Generates repeated values
+					 : var repeated = Enumerable.Repeat("Hello", 3);
+
+# Sequence Operators ----
+=> SEQUENCEEQUAL	 : var isEqual = collection1.SequenceEqual(collection2);
+=> CONCAT			 : var result = collection1.Concat(collection2);
+=> ZIP				 : var result = collection1.Zip(collection2, (x, y) => x + " " + y); ✔️ Combines two collections.
+
+# Quantifying Members ----
+: These operators are used to evaluate conditions across a collection.
+=> ANY : ✔️ Checks if any element in the collection satisfies a condition.
+	   : bool result = collection.Any(condition);
+
+=> ALL : ✔️ Checks if all elements in the collection satisfy a condition.
+	   : bool result = collection.All(condition);
+
+# Query Expression ----
+=> LET	: ✔️ Creates a temporary variable inside a LINQ query.
+		: var result = from x in collection  
+             let tempVar = someExpression  
+             where condition  
+             select tempVar;
+
+=> INTO : ✔️ Allows chaining queries and continues LINQ expressions.
+		: var result = from x in collection  
+             group x by x.Property into newGroup  
+             select newGroup;
+
+# Parallel LINQ (PLINQ)
+Operations:
+		: .AsParallel() => Enables parallel execution.
+		: .WithDegreeOfParallelism(n)=> Limits parallel threads.
+		: .ForAll() => Executes results in parallel.
+		: .AsSequential() => Reverts back to sequential execution.
+
+# SELECT() and SELECTMANY()
+	string[] words = { "Hello", "World", "LINQ" };
+	var firstLetters = words.Select(w => w[0]);
+	var characters = words.SelectMany(w => w.ToCharArray());
+	Console.WriteLine(string.Join(", ", characters));   // Output: H, e, l, l, o, W, o, r, l, d, L, I, N, Q
+	Console.WriteLine(string.Join(", ", firstLetters)); // Output: H, W, L
+
+	var students = new List<Student>
+	{
+		new Student { Name = "Alice", Subjects = new List<string> { "Math", "Physics" } },
+		new Student { Name = "Bob", Subjects = new List<string> { "Chemistry" } }
+	};
+	var studentNames = students.Select(s => s.Name);
+	var allSubjects = students.SelectMany(s => s.Subjects);
+	Console.WriteLine(string.Join(", ", allSubjects));// Output: Math, Physics, Chemistry
+	Console.WriteLine(string.Join(", ", studentNames));// Output: Alice, Bob
+
+# WHERE()
+	var results = numbers.Where(n => n % 2 == 0 && n > 3);
+	Console.WriteLine(string.Join(", ", results)); // Output: 4, 6
+	
+	var indexedResults = numbers.Where((n, index) => index % 2 == 0);
+	Console.WriteLine(string.Join(", ", indexedResults)); // Output: 1, 3, 5 (Even indexed elements)
+
+# ORDERBY(), ORDERBYDESCENDING(), THENBY(), THENBYDESCENDING()
+	var employees = new List<Employee>
+	{
+		new Employee { Name = "Alice", Department = "HR", Salary = 5000 },
+		new Employee { Name = "Bob", Department = "IT", Salary = 7000 },
+		new Employee { Name = "Charlie", Department = "IT", Salary = 6000 },
+		new Employee { Name = "David", Department = "HR", Salary = 4500 }
+	};
+
+	var sortedEmployees = employees.OrderBy(e => e.Department)
+								   .ThenByDescending(e => e.Salary);
+
+	foreach (var emp in sortedEmployees)
+	{
+		Console.WriteLine($"{emp.Name} - {emp.Department} - {emp.Salary}");
+	}
+	// Output:
+	// David - HR - 4500
+	// Alice - HR - 5000
+	// Bob - IT - 7000
+	// Charlie - IT - 6000
+
+# GROUPBY()
+	var departmentCounts = employees.GroupBy(e => e.Department)
+                                .Select(group => new 
+                                { 
+                                    Department = group.Key, 
+                                    Count = group.Count() 
+                                });
+
+	foreach (var dept in departmentCounts)
+	{
+		Console.WriteLine($"{dept.Department}: {dept.Count} employees");
+	}
+	class Product
+	{
+		public string Category { get; set; }
+		public string Name { get; set; }
+		public double Price { get; set; }
+	}
+	var products = new List<Product>
+	{
+		new Product { Category = "Electronics", Name = "Laptop", Price = 800 },
+		new Product { Category = "Electronics", Name = "Phone", Price = 500 },
+		new Product { Category = "Clothing", Name = "Shirt", Price = 30 },
+		new Product { Category = "Clothing", Name = "Jeans", Price = 50 }
+	};
+	var groupedProducts = products.GroupBy(p => p.Category)
+								  .Select(group => new 
+								  { 
+									  Category = group.Key, 
+									  TotalPrice = group.Sum(p => p.Price) 
+								  });
+
+	foreach (var category in groupedProducts)
+	{
+		Console.WriteLine($"{category.Category}: Total Price = {category.TotalPrice}");
+	}
+	#Tolookup
+	var lookup = employees.ToLookup(e => e.Department);
+	foreach (var group in lookup)
+	{
+		Console.WriteLine($"{group.Key}: {group.Count()} employees");
+	}
+
+# JOIN (INNER JOIN) : An Inner Join returns only matching records from both collections.
+	var employees = new List<Employee>
+	{
+		new Employee { Id = 1, Name = "Alice", DepartmentId = 1 },
+		new Employee { Id = 2, Name = "Bob", DepartmentId = 2 },
+		new Employee { Id = 3, Name = "Charlie", DepartmentId = 3 }
+	};
+
+	var departments = new List<Department>
+	{
+		new Department { Id = 1, Name = "HR" },
+		new Department { Id = 2, Name = "IT" }
+	};
+
+	var result = employees.Join(departments,
+								e => e.DepartmentId,  // Employee.DepartmentId
+								d => d.Id,            // Department.Id
+								(e, d) => new { e.Name, DepartmentName = d.Name });
+
+	foreach (var item in result)
+	{
+		Console.WriteLine($"{item.Name} works in {item.DepartmentName}");
+	}
+	Alice works in HR
+	Bob works in IT
+	Charlie is excluded because there’s no matching DepartmentId.
+
+# GROUPJOIN (LEFT JOIN)
+	var result = departments.GroupJoin(employees,
+                                   d => d.Id,
+                                   e => e.DepartmentId,
+                                   (d, empGroup) => new { Department = d.Name, Employees = empGroup });
+
+	foreach (var group in result)
+	{
+		Console.WriteLine($"{group.Department}: {string.Join(", ", group.Employees.Select(e => e.Name))}");
+	}
+	HR: Alice
+	IT: Bob
+	Finance:   // No employees in Finance
+
+# GROUPJOIN + DEFAULTIFEMPTY() : A Left Join returns all records from the left collection and matched records from the right (or NULL if no match).
+
+	var result = departments.GroupJoin(employees,
+                                   d => d.Id,
+                                   e => e.DepartmentId,
+                                   (d, empGroup) => new { Department = d.Name, Employees = empGroup.DefaultIfEmpty() });
+
+	foreach (var group in result)
+	{
+		foreach (var emp in group.Employees)
+		{
+			Console.WriteLine($"{group.Department}: {(emp != null ? emp.Name : "No Employee")}");
+		}
+	}
+	HR: Alice
+	IT: Bob
+	Finance: No Employee
+	Now "Finance" shows explicitly that it has "No Employee" instead of an empty result.
+
+# RIGHTJOIN (Simulated using Left Join) : A Right Join returns all records from the right collection and matched records from the left.
+	LINQ does not have a direct Right Join, but we can swap the table order and use Left Join.
+	var result = departments.GroupJoin(employees,
+                                   d => d.Id,
+                                   e => e.DepartmentId,
+                                   (d, empGroup) => new { Department = d, Employees = empGroup.DefaultIfEmpty() });
+
+	foreach (var group in result)
+	{
+		foreach (var emp in group.Employees)
+		{
+			Console.WriteLine($"{group.Department.Name} - {(emp != null ? emp.Name : "No Employee")}");
+		}
+	}
+	HR - Alice
+	IT - Bob
+	Finance - No Employee
+
+# FULLOUTERJOIN : A Full Outer Join returns all records from both collections, inserting NULL when no match is found.
+	LINQ does not support Full Outer Join directly, but we can achieve it using Union + Left Join + Right Join.
+	var leftJoin = employees.GroupJoin(departments,
+                                   e => e.DepartmentId,
+                                   d => d.Id,
+                                   (e, deptGroup) => new { Employee = e.Name, Department = deptGroup.Select(d => d.Name).FirstOrDefault() });
+
+	var rightJoin = departments.GroupJoin(employees,
+										  d => d.Id,
+										  e => e.DepartmentId,
+										  (d, empGroup) => new { Employee = empGroup.Select(e => e.Name).FirstOrDefault(), Department = d.Name });
+
+	var fullOuterJoin = leftJoin.Union(rightJoin);
+
+	foreach (var item in fullOuterJoin)
+	{
+		Console.WriteLine($"{item.Employee ?? "No Employee"} - {item.Department ?? "No Department"}");
+	}
+	Alice - HR
+	Bob - IT
+	Charlie - No Department
+	No Employee - Finance
+
+# CROSSJOIN : A Cross Join creates a Cartesian Product (every combination of records from both tables).
+	var result = from e in employees
+             from d in departments
+             select new { e.Name, Department = d.Name };
+
+	foreach (var item in result)
+	{
+		Console.WriteLine($"{item.Name} - {item.Department}");
+	}
+	Alice - HR
+	Alice - IT
+	Alice - Finance
+	Bob - HR
+	Bob - IT
+	Bob - Finance
+	Charlie - HR
+	Charlie - IT
+	Charlie - Finance
+
+# SELFJOIN : A Self Join is used to join a table to itself, often for hierarchical relationships like managers and employees.
+	var result = employees.Join(employees,
+                            manager => manager.Id,
+                            employee => employee.ManagerId,
+                            (manager, employee) => new { Employee = employee.Name, Manager = manager.Name });
+
+	foreach (var item in result)
+	{
+		Console.WriteLine($"{item.Employee} reports to {item.Manager}");
+	}
+	Alice reports to Bob
+	Charlie reports to Alice
+
