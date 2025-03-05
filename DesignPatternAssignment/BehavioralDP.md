@@ -30,7 +30,7 @@
 -> Visitor  : It separates algorithms from objects.
 -> Template : Defines the skeleton of an algorithm.
 
-<OBSERVER : STRUCTURAL PATTERN> --------------------------
+<OBSERVER : BEHAVIORAL PATTERN> --------------------------
 WHAT : The Observer Pattern defines a one-to-many dependency between objects. 
        When the subject (observable) changes its state, all dependent observers are notified automatically.
 WHEN : Instant notify
@@ -118,7 +118,7 @@ Step 5: Use the Observer Pattern in the Client Code
         }
 
 
-<CHAIN OF RESPONSIBILITY : STRUCTURAL PATTERN> --------------------------
+<CHAIN OF RESPONSIBILITY : BEHAVIORAL PATTERN> --------------------------
 WHAT : The Chain of Responsibility Pattern passes a request through a chain of handlers until one handles it.
 WHEN : Customer support (escalate complaints to higher levels if not resolved).
 WHY  : To provide multiple ways to handle a request dynamically.
@@ -194,7 +194,7 @@ Step 3: Use the Pattern in Client Code
         }
         
 
-<ITERATOR : STRUCTURAL PATTERN> --------------------------
+<ITERATOR : BEHAVIORAL PATTERN> --------------------------
 WHAT : The Iterator Pattern provides a way to sequentially access elements of a collection without exposing its underlying structure.
 WHEN : Database cursors (to fetch records one by one). Tree traversal algorithms.
 WHY  : To traverse different collections uniformly.
@@ -256,7 +256,7 @@ Step 5: Client Code
 ✅ Solution: The Iterator provides a uniform way to traverse collections.\
 
 
-<MEDIATOR : STRUCTURAL PATTERN> --------------------------
+<MEDIATOR : BEHAVIORAL PATTERN> --------------------------
 WHAT : The Mediator Pattern centralizes communication between objects to reduce dependencies.
 WHEN : Traffic control systems.
 WHY  : To avoid direct dependencies between classes.
